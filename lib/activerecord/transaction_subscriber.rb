@@ -1,26 +1,29 @@
 # frozen_string_literal: true
 
-require_relative "transaction_subscriber/version"
+require 'active_record'
+require 'active_record/log_subscriber'
+
+require_relative 'transaction_subscriber/version'
 
 module ActiveRecord
-  class TransactionSubscriber < ActiveRecord::LogSubscriber
+  class TransactionSubscriber < LogSubscriber
     thread_mattr_accessor :transactions
 
     def sql(event)
       payload = event.payload
       return if payload[:cached]
 
-      sql = payload[:sql]
+      sql_statement = payload[:sql]
 
       case payload[:name]
       when 'TRANSACTION'
-        case sql
+        case sql_statement
         when 'BEGIN', 'SAVEPOINT'
           my_transactions << { start_at: event.time }
         when 'COMMIT', 'ROLLBACK'
           tx = my_transactions.pop
           if tx
-            logging(payload[:name], tx, event.end)
+            logging(sql_statement, tx, event.end)
           end
         else
           # Unknown transaction
@@ -30,7 +33,7 @@ module ActiveRecord
       else
         tx = my_transactions.last
         if tx
-          type = sql_type(sql)
+          type = sql_type(sql_statement)
           if type
             tx[type] ||= []
             tx[type] << event.duration
@@ -43,9 +46,9 @@ module ActiveRecord
       self.class.transactions ||= []
     end
 
-    def logging(name, tx, end_at)
+    def logging(sql_statement, tx, end_at)
       elapsed_time = ((end_at - tx[:start_at]) * 1000.0).round(1)
-      text = "  Transaction #{name} real time: #{elapsed_time}ms"
+      text = "  Transaction #{sql_statement} real time: #{elapsed_time}ms"
       %i[lock select insert update delete].each do |type|
         next unless tx[type]
         count = tx[type].size

@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
+require 'active_record'
+require 'active_record/log_subscriber'
+
 module ActiveRecord
-  class TransactionSubscriber
-    VERSION = "0.1.2"
+  class TransactionSubscriber < LogSubscriber
+    VERSION = '0.1.3'
   end
 end

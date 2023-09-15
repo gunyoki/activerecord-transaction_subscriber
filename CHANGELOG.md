@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.1.3] - 2023-09-15
+
+- Add ActiveRecord::LogSubscriber
+- Show SQL statement
+
 ## [0.1.2] - 2023-09-15
 
 - Relaxed ActiveRecord version restrictions
